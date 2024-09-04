@@ -1,29 +1,42 @@
-const { isRedisAlive, isDbAlive, nbUsers, nbFiles } = require('../utils');
+#!/usr/bin/node
+import redisClient from '../utils/redis.js';
+import dbClient from '../utils/db.js';
 
-const AppController = {
-  getStatus: async (req, res) => {
-    try {
-      const redisAlive = await isRedisAlive();
-      const dbAlive = await isDbAlive();
-
-      res.status(200).json({ redis: redisAlive, db: dbAlive });
-    } catch (error) {
-      console.error('Failed to check status:', error);
-      res.status(500).json({ error: 'Failed to check status' });
+/**
+ * AppController handles application-related routes.
+ */
+class AppController {
+  /**
+   * Handles GET requests to /status.
+   * Checks the status of the Redis and database connections.
+   * @param {Object} req - The request object.
+   * @param {Object} res - The response object.
+   */
+  static getStatus(req, res) {
+    if (redisClient.isAlive() && dbClient.isAlive()) {
+      res.json({ redis: true, db: true });
+    } else {
+      res.json({ redis: false, db: false });
     }
-  },
+    res.end();
+  }
 
-  getStats: async (req, res) => {
+  /**
+   * Handles GET requests to /stats.
+   * Retrieves and returns the number of users and files.
+   * @param {Object} req - The request object.
+   * @param {Object} res - The response object.
+   */
+  static async getStats(req, res) {
     try {
-      const usersCount = await nbUsers();
-      const filesCount = await nbFiles();
-
-      res.status(200).json({ users: usersCount, files: filesCount });
+      const users = await dbClient.nbUsers();
+      const files = await dbClient.nbFiles();
+      res.json({ users, files });
     } catch (error) {
-      console.error('Failed to fetch stats:', error);
-      res.status(500).json({ error: 'Failed to fetch stats' });
+      res.status(500).json({ error: 'Failed to retrieve stats' });
     }
-  },
-};
+    res.end();
+  }
+}
 
-module.exports = AppController;
+export default AppController;
